@@ -1,0 +1,12 @@
+<resources>
+    <string name="app_name">SensorPlatform</string>
+
+
+    <string name="str_main_connect_aws">AWS Connect</string>
+
+
+    // Bluetooth
+    <string name="str_bluetooth_unknown_characteristic">Unknown characteristic</string>
+    <string name="str_bluetooth_unknown_service">Unknown service</string>
+    <string name="str_bluetooth_not_supported">Bluetooth not supported.</string>
+</resources>
