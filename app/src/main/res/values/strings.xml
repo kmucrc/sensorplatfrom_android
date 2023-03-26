@@ -2,11 +2,27 @@
     <string name="app_name">SensorPlatform</string>
 
 
-    <string name="str_main_connect_aws">AWS Connect</string>
+    <string name="str_main_connect_aws">AWS</string>
 
+    // Main
+    <string name="str_main_connect">CONNECT</string>
+    <string name="str_main_disconnect">DISCONNECT</string>
+    <string name="str_main_start">START</string>
+    <string name="str_main_stop">STOP</string>
+    <string name="str_main_chestpod">Chest : </string>
+    <string name="str_main_spo2">SpO2 : </string>
 
     // Bluetooth
     <string name="str_bluetooth_unknown_characteristic">Unknown characteristic</string>
     <string name="str_bluetooth_unknown_service">Unknown service</string>
     <string name="str_bluetooth_not_supported">Bluetooth not supported.</string>
+
+    // Menu
+    <string name="str_menu_device_setting">Device Setting</string>
+
+    // DeviceSetting
+    <string name="str_devicesetting_chestpod_title">ChestPod</string>
+    <string name="str_devicesetting_spo2_title">SpO2</string>
+    <string name="str_devicesetting_no_address">Not Use</string>
+    <string name="str_devicesetting_default_address">00:00:00:00:00:00</string>
 </resources>

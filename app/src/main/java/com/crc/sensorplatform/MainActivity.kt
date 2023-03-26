@@ -10,12 +10,12 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.IBinder
 import android.os.Message
-import android.provider.SyncStateContract
 import android.util.Log
-import androidx.core.content.ContextCompat
+import android.view.Menu
+import android.view.MenuInflater
+import android.view.MenuItem
 import com.crc.sensorplatform.base.BluetoothClassicManager
 import com.crc.sensorplatform.base.Constants
-import com.crc.sensorplatform.base.Constants.Companion.strDeviceAddress
 import com.crc.sensorplatform.bluetooth.BluetoothLeService
 import com.crc.sensorplatform.bluetooth.SampleGattAttributes
 import com.crc.sensorplatform.databinding.ActivityMainBinding
@@ -113,7 +113,7 @@ class MainActivity : AppCompatActivity() {
         filter = IntentFilter(BluetoothAdapter.ACTION_SCAN_MODE_CHANGED)
         this.registerReceiver(mReceiver, filter)
 
-        binding.btOximetryConnect.setOnClickListener{
+        binding.btConnect.setOnClickListener{
             doDiscovery()
         }
 
@@ -178,17 +178,17 @@ class MainActivity : AppCompatActivity() {
             // When discovery finds a device
             if (BluetoothDevice.ACTION_FOUND == action) {
                 val device = intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE)
-                var strDeviceAddress = device!!.address
+                val strDeviceAddress = device!!.address
                 Constants.strDeviceAddress = strDeviceAddress
                 Log.e("eleutheria", "address : ${strDeviceAddress}")
 
-                if(strDeviceAddress.equals(Constants.MODULE_ADDRESS_OXIMETRY)) {
+                if(strDeviceAddress.equals(Constants.MODULE_ADDRESS_OXIMETRY1)) {
                     Log.e("eleutheria", "find device Oximetry")
                     if(mBluetoothClassicManager.state != 2 ) {
                         mBluetoothClassicManager.connect(Constants.strDeviceAddress)
                     }
                 }
-                device.bondState
+
                 if (device.bondState != BluetoothDevice.BOND_BONDED) {
                 }
 
@@ -228,9 +228,9 @@ class MainActivity : AppCompatActivity() {
                         Log.e("eleutheria", "MESSAGE_READ : $readMessage")
 
 //                        sendMessageToActivity(readMessage)
-                        var byteHR = ByteBuffer.wrap( byteArrayOf(readBuf!!.get(1), readBuf!!.get(0)) )
-                        var byteSpO2 = ByteBuffer.wrap( byteArrayOf(readBuf!!.get(3), readBuf!!.get(2)) )
-                        var byteHba1c = ByteBuffer.wrap( byteArrayOf(readBuf!!.get(7), readBuf!!.get(6), readBuf!!.get(5), readBuf!!.get(4)) )
+                        val byteHR = ByteBuffer.wrap( byteArrayOf(readBuf.get(1), readBuf.get(0)) )
+                        val byteSpO2 = ByteBuffer.wrap( byteArrayOf(readBuf.get(3), readBuf.get(2)) )
+                        val byteHba1c = ByteBuffer.wrap( byteArrayOf(readBuf.get(7), readBuf.get(6), readBuf.get(5), readBuf.get(4)) )
 
                         val intHR = byteHR.getShort()
                         val intSpO2 = byteSpO2.getShort()
@@ -292,8 +292,8 @@ class MainActivity : AppCompatActivity() {
         binding.tvGyroYValue.text = "1.01"
         binding.tvGyroZValue.text = "0.02"
 
-        binding.btOximetryConnect.text = "DISCONNECT"
-        binding.btChestConnect.text = "DISCONNECT"
+        binding.btConnect.text = "DISCONNECT"
+        binding.btConnect.text = "DISCONNECT"
         binding.tvConStat.text = "Connect"
     }
 
@@ -371,6 +371,26 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+//        return super.onCreateOptionsMenu(menu)
+
+        val inflater : MenuInflater = menuInflater
+        inflater.inflate(R.menu.menu_main, menu)
+
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        when(item.itemId) {
+            R.id.mn_device_setting -> {
+                Log.e("eleutheria", "Click Menu1")
+                val intent = Intent(this@MainActivity, DeviceSettingActivity::class.java)
+                startActivity(intent)
+            }
+        }
+        return super.onOptionsItemSelected(item)
+    }
+
     companion object {
         private val TAG = MainActivity::class.java.getSimpleName()
 
@@ -384,3 +404,4 @@ class MainActivity : AppCompatActivity() {
         }
     }
 }
+

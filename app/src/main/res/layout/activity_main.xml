@@ -7,23 +7,23 @@
     tools:context=".MainActivity">
 
     <Button
-        android:id="@+id/btChestConnect"
+        android:id="@+id/btConnect"
         android:layout_width="140dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="30dp"
         android:layout_marginTop="20dp"
-        android:text="Connect"
+        android:text="@string/str_main_connect"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
     <Button
-        android:id="@+id/btOximetryConnect"
+        android:id="@+id/btStart"
         android:layout_width="140dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="30dp"
         android:layout_marginTop="20dp"
-        android:text="Connect"
-        app:layout_constraintStart_toEndOf="@id/btChestConnect"
+        android:text="@string/str_main_start"
+        app:layout_constraintStart_toEndOf="@id/btConnect"
         app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
@@ -32,19 +32,30 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="30dp"
         android:layout_marginTop="20dp"
-        android:text="Disconnected"
+        android:text="@string/str_main_spo2"
         android:textColor="#AAAAAA"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/btChestConnect" />
+        app:layout_constraintTop_toBottomOf="@id/btConnect" />
+
+    <TextView
+        android:id="@+id/tvFitStat"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="30dp"
+        android:layout_marginTop="10dp"
+        android:text="@string/str_main_chestpod"
+        android:textColor="#AAAAAA"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvConStat" />
 
     <Switch
         android:id="@+id/swConnect"
-        android:layout_width="160dp"
+        android:layout_width="100dp"
         android:layout_height="wrap_content"
         android:layout_alignParentTop="true"
         android:layout_marginStart="70dp"
         android:text="@string/str_main_connect_aws"
-        app:layout_constraintStart_toEndOf="@id/tvConStat"
+        app:layout_constraintEnd_toEndOf="@id/btStart"
         app:layout_constraintTop_toTopOf="@id/tvConStat" />
 
     <View
@@ -55,7 +66,7 @@
         android:background="?android:attr/listDivider"
         android:layout_marginTop="20dp"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tvConStat" />
+        app:layout_constraintTop_toBottomOf="@id/tvFitStat" />
 
     <TextView
         android:id="@+id/tvHbA1c"
