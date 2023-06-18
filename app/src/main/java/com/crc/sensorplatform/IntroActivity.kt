@@ -64,6 +64,8 @@ class IntroActivity : AppCompatActivity() {
     private fun loadSetting() {
         settings = getSharedPreferences(Constants.SHARED_PREF_SEUPDATA, Context.MODE_PRIVATE)
 
+        Constants.nSelUser =
+            settings!!.getInt(Constants.PREF_USER_INDEX, Constants.nSelUser)
         Constants.nSelChestPod =
             settings!!.getInt(Constants.PREF_CHESTPOD_INDEX, Constants.nSelChestPod)
         Constants.nSelSpO2 =

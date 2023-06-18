@@ -27,7 +27,13 @@
         android:theme="@style/Theme.SensorPlatform"
         tools:targetApi="31">
         <activity
+            android:name=".GraphActivity"
+            android:screenOrientation="landscape"
+            android:theme="@style/Theme.SensorPlatformNoActionBar"
+            android:exported="false" />
+        <activity
             android:name=".DeviceSettingActivity"
+            android:theme="@style/Theme.SensorPlatformNoActionBar"
             android:exported="false" />
         <activity
             android:name=".IntroActivity"
@@ -40,7 +46,8 @@
         </activity>
         <activity
             android:name=".MainActivity"
-            android:exported="true"></activity>
+            android:screenOrientation="portrait"
+            android:exported="true" />
     </application>
 
 </manifest>

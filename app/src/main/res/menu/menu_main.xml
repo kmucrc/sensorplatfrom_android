@@ -4,4 +4,7 @@
         <item android:id="@+id/mn_device_setting"
             android:title="@string/str_menu_device_setting"
             app:showAsAction="never"/>
+        <item android:id="@+id/mn_accel_graph"
+            android:title="@string/str_menu_accel_graph"
+            app:showAsAction="never"/>
 </menu>

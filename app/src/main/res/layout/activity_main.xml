@@ -27,7 +27,7 @@
         app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
-        android:id="@+id/tvConStat"
+        android:id="@+id/tvSpo2Title"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="30dp"
@@ -38,7 +38,18 @@
         app:layout_constraintTop_toBottomOf="@id/btConnect" />
 
     <TextView
-        android:id="@+id/tvFitStat"
+        android:id="@+id/tvSpo2Stat"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="30dp"
+        android:layout_marginTop="20dp"
+        android:text="@string/str_main_disconnect"
+        android:textColor="#AAAAAA"
+        app:layout_constraintStart_toEndOf="@+id/tvSpo2Title"
+        app:layout_constraintTop_toBottomOf="@id/btConnect" />
+
+    <TextView
+        android:id="@+id/tvChestTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="30dp"
@@ -46,7 +57,18 @@
         android:text="@string/str_main_chestpod"
         android:textColor="#AAAAAA"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tvConStat" />
+        app:layout_constraintTop_toBottomOf="@id/tvSpo2Title" />
+
+    <TextView
+        android:id="@+id/tvChestStat"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="30dp"
+        android:layout_marginTop="10dp"
+        android:text="@string/str_main_disconnect"
+        android:textColor="#AAAAAA"
+        app:layout_constraintStart_toEndOf="@+id/tvChestTitle"
+        app:layout_constraintTop_toBottomOf="@id/tvSpo2Title" />
 
     <Switch
         android:id="@+id/swConnect"
@@ -56,17 +78,17 @@
         android:layout_marginStart="70dp"
         android:text="@string/str_main_connect_aws"
         app:layout_constraintEnd_toEndOf="@id/btStart"
-        app:layout_constraintTop_toTopOf="@id/tvConStat" />
+        app:layout_constraintTop_toTopOf="@id/tvSpo2Title" />
 
     <View
         android:id="@+id/divider"
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:layout_alignBottom="@+id/tvConStat"
+        android:layout_alignBottom="@+id/tvSpo2Title"
         android:background="?android:attr/listDivider"
         android:layout_marginTop="20dp"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tvFitStat" />
+        app:layout_constraintTop_toBottomOf="@id/tvChestTitle" />
 
     <TextView
         android:id="@+id/tvHbA1c"

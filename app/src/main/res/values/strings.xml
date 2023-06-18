@@ -19,10 +19,15 @@
 
     // Menu
     <string name="str_menu_device_setting">Device Setting</string>
+    <string name="str_menu_accel_graph">Accelerator Graph</string>
 
     // DeviceSetting
     <string name="str_devicesetting_chestpod_title">ChestPod</string>
     <string name="str_devicesetting_spo2_title">SpO2</string>
     <string name="str_devicesetting_no_address">Not Use</string>
     <string name="str_devicesetting_default_address">00:00:00:00:00:00</string>
+
+
+    // Graph
+    <string name="str_graph_ok">OK</string>
 </resources>

@@ -125,4 +125,25 @@
             android:onClick="onSpO2RadioClicked"
             android:text="@string/str_devicesetting_default_address" />
     </RadioGroup>
+
+    <View
+        android:id="@+id/dvUser"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_alignBottom="@+id/rgSpO2"
+        android:background="?android:attr/listDivider"
+        android:layout_marginTop="20dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/rgSpO2" />
+
+
+    <Spinner
+        android:id="@+id/spUser"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:layout_marginEnd="20dp"
+        android:entries="@array/users"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/dvUser" />
 </androidx.constraintlayout.widget.ConstraintLayout>

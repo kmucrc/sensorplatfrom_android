@@ -1,94 +1,199 @@
 package com.crc.sensorplatform
 
-import android.bluetooth.BluetoothAdapter
-import android.bluetooth.BluetoothDevice
-import android.bluetooth.BluetoothGattCharacteristic
-import android.bluetooth.BluetoothGattService
+import android.Manifest
+import android.annotation.SuppressLint
+import android.bluetooth.*
+import android.bluetooth.le.*
 import android.content.*
-import androidx.appcompat.app.AppCompatActivity
-import android.os.Bundle
-import android.os.Handler
-import android.os.IBinder
-import android.os.Message
+import android.content.pm.PackageManager
+import android.content.res.ColorStateList
+import android.location.Location
+import android.location.LocationListener
+import android.location.LocationManager
+import android.os.*
 import android.util.Log
 import android.view.Menu
 import android.view.MenuInflater
 import android.view.MenuItem
+import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import com.crc.sensorplatform.base.BluetoothClassicManager
 import com.crc.sensorplatform.base.Constants
-import com.crc.sensorplatform.bluetooth.BluetoothLeService
-import com.crc.sensorplatform.bluetooth.SampleGattAttributes
+import com.crc.sensorplatform.database.Accelerometer
+import com.crc.sensorplatform.database.AccelerometerDao
+import com.crc.sensorplatform.database.AppDatabase
 import com.crc.sensorplatform.databinding.ActivityMainBinding
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import org.json.JSONObject
 import java.nio.ByteBuffer
-import java.util.ArrayList
-import java.util.HashMap
+import java.nio.charset.StandardCharsets
+import java.util.*
 
 class MainActivity : AppCompatActivity() {
-    private  lateinit var binding : ActivityMainBinding
+    private lateinit var binding: ActivityMainBinding
 
     private val mBtHandler = BluetoothHandler()
-    private val mBluetoothClassicManager: BluetoothClassicManager = BluetoothClassicManager.getInstance()
+    private val mBluetoothClassicManager: BluetoothClassicManager =
+        BluetoothClassicManager.getInstance()
     private var mIsConnected = false
 
-    private var mDeviceAddress: String? = null
 
-    var mBluetoothLeService: BluetoothLeService? = null
-    private var mGattCharacteristics: ArrayList<ArrayList<BluetoothGattCharacteristic>>? =
-        ArrayList()
-    private var mIsBLEConnected = false
-    private var mNotifyCharacteristic: BluetoothGattCharacteristic? = null
+//    var mBluetoothAdapter: BluetoothAdapter? = null
+//    var mPairedDevices: MutableSet<BluetoothDevice>? = null
+//    var mListPairedDevices: ArrayList<String>? = null
+//
+//
+////    var mBluetoothHandler: Handler? = null
+//    private var mThreadConnectedBluetooth: ConnectedBluetoothThread? = null
+//    var mBluetoothDevice: BluetoothDevice? = null
+//    var mBluetoothSocket: BluetoothSocket? = null
+//
+//    var pre_device_name = ""
+//    val BT_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB")
+//
+//    val BT_REQUEST_ENABLE = 1
+//
+//    val BT_MESSAGE_READ = 2
+//
+//    val BT_CONNECTING_STATUS = 3
 
-    private val LIST_NAME = "NAME"
-    private val LIST_UUID = "UUID"
-    // Code to manage Service lifecycle.
-    private val mServiceConnection = object : ServiceConnection {
+    private lateinit var accelerometerDao : AccelerometerDao
+    lateinit var appContext : Context
 
-        override fun onServiceConnected(componentName: ComponentName, service: IBinder) {
-            mBluetoothLeService = (service as BluetoothLeService.LocalBinder).service
-            if (!mBluetoothLeService!!.initialize()) {
-                Log.e(TAG, "Unable to initialize Bluetooth")
-                finish()
+    private lateinit var bluetoothAdapter: BluetoothAdapter
+    private lateinit var bluetoothGatt: BluetoothGatt
+
+    private lateinit var locationManager: LocationManager
+    private lateinit var locationListener: LocationListener
+
+    private val bluetoothGattCallback = object : BluetoothGattCallback() {
+        @SuppressLint("MissingPermission")
+        override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
+            if (newState == BluetoothProfile.STATE_CONNECTED) {
+                // Connected to the BLE device, start discovering services
+                gatt.discoverServices()
+                binding.tvChestStat.text = getString(R.string.str_main_connect)
+                binding.tvChestStat.setTextColor(ColorStateList.valueOf(ContextCompat.getColor(applicationContext, R.color.red)))
+            } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
+                // Disconnected from the BLE device, clean up resources
+                bluetoothGatt.close()
+
+                binding.tvChestStat.text = getString(R.string.str_main_disconnect)
+                binding.tvChestStat.setTextColor(ColorStateList.valueOf(ContextCompat.getColor(applicationContext, R.color.gray)))
             }
-            // Automatically connects to the device upon successful start-up initialization.
-            mBluetoothLeService!!.connect(mDeviceAddress)
         }
 
-        override fun onServiceDisconnected(componentName: ComponentName) {
-            mBluetoothLeService = null
+        @SuppressLint("MissingPermission")
+        override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+                // Services discovered, retrieve the desired service and characteristic
+                val service = gatt.getService(CHESTPOD_SERVICE_UUID)
+                val characteristic = service?.getCharacteristic(CHESTPOD_CHARACTERISTIC_UUID)
+
+                // Enable notifications on the characteristic
+                gatt.setCharacteristicNotification(characteristic, true)
+                val descriptor = characteristic?.getDescriptor(CLIENT_CHARACTERISTIC_CONFIG_UUID)
+                descriptor?.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+                gatt.writeDescriptor(descriptor)
+            }
+        }
+
+        override fun onCharacteristicChanged(
+            gatt: BluetoothGatt,
+            characteristic: BluetoothGattCharacteristic
+        ) {
+            // Handle the received data here
+            val receivedData = characteristic.value
+            // Process the received data as needed
+//            Log.e("eleutheria", "receivedData : ${bytesToHexString(receivedData)}")
+//            Log.e("eleutheria", "receivedData")
+
+            val receivedString = receivedData.toString(StandardCharsets.UTF_8)
+
+//            Log.e("eleutheria", "receivedString : ${receivedString}")
+
+            if(receivedString.contains("humi")) {
+                Constants.strReceivedData += receivedString
+
+                val strData = Constants.strReceivedData
+                Constants.strReceivedData = ""
+
+                val jsonObject = JSONObject()
+
+                val keyValuePairList = strData.split("/")
+
+                for (pair in keyValuePairList) {
+                    val keyValue = pair.split(":")
+                    if (keyValue.size == 2) {
+                        val key = keyValue[0].trim()
+                        val value = keyValue[1].trim()
+                        jsonObject.put(key, value)
+                    }
+                }
+
+                val jsonString = jsonObject.toString()
+//                Log.e("eleutheria", "jsonString : ${jsonString}")
+
+                sendNetworkData(jsonString)
+
+                val axValue = jsonObject.getString("Ax")
+                val ayValue = jsonObject.getString("Ay")
+                val azValue = jsonObject.getString("Az")
+                val gxValue = jsonObject.getString("Gx")
+                val gyValue = jsonObject.getString("Gy")
+                val gzValue = jsonObject.getString("Gz")
+                val btempValue = jsonObject.getString("btemp")
+                val tempValue = jsonObject.getString("temp")
+                val humiValue = jsonObject.getString("humi")
+
+                saveAccelData(axValue.toFloat(), ayValue.toFloat(), azValue.toFloat() )
+
+                runOnUiThread {
+                    binding.tvAccelXValue.text = axValue
+                    binding.tvAccelYValue.text = ayValue
+                    binding.tvAccelZValue.text = azValue
+                    binding.tvGyroXValue.text = gxValue
+                    binding.tvGyroYValue.text = gyValue
+                    binding.tvGyroZValue.text = gzValue
+                    binding.tvBodyTempValue.text = btempValue
+                    binding.tvTempValue.text = tempValue
+                    binding.tvHumiValue.text = humiValue
+
+//                    Log.e("eleutheria", "strData : ${strData}")
+//                    Log.e("eleutheria", "Constants.strReceivedData : ${Constants.strReceivedData}")
+                }
+
+            } else {
+                Constants.strReceivedData += receivedString
+            }
         }
     }
 
-    // Handles various events fired by the Service.
-    // ACTION_GATT_CONNECTED: connected to a GATT server.
-    // ACTION_GATT_DISCONNECTED: disconnected from a GATT server.
-    // ACTION_GATT_SERVICES_DISCOVERED: discovered GATT services.
-    // ACTION_DATA_AVAILABLE: received data from the device.  This can be a result of read
-    //                        or notification operations.
-    private val mGattUpdateReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) {
-            val action = intent.action
-            if (BluetoothLeService.ACTION_GATT_CONNECTED == action) {
-                mIsBLEConnected = true
-
-            } else if (BluetoothLeService.ACTION_GATT_DISCONNECTED == action) {
-                mIsBLEConnected = false
-
-            } else if (BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED == action) {
-                // Show all the supported services and characteristics on the user interface.
-                displayGattServices(mBluetoothLeService!!.supportedGattServices)
-                activeNotification()
-                Log.e("eleutheria", "ACTION_GATT_SERVICES_DISCOVERED")
-
-//                val intent = Intent(this@LoadingDrivingActivity, LoadingFrontActivity::class.java)
-//                val intent = Intent(this@MainActivity, LoadingFrontClassicActivity::class.java)
-//                val intent = Intent(this@LoadingDrivingActivity, MainActivity::class.java)
-//                startActivity(intent)
-            } else if (BluetoothLeService.ACTION_DATA_AVAILABLE == action) {
-                parsingData(intent.getStringExtra(BluetoothLeService.EXTRA_DATA))
-//                Log.e("eleutheria", "ACTION_DATA_AVAILABLE")
-//                val intent = Intent(this@LoadingDrivingActivity, LoadingFrontActivity::class.java)
-//                startActivity(intent)
+    private lateinit var bluetoothManager: BluetoothManager
+    private lateinit var bluetoothLeScanner: BluetoothLeScanner
+    private val scanCallback = object : ScanCallback() {
+        @SuppressLint("MissingPermission")
+        override fun onScanResult(callbackType: Int, result: ScanResult?) {
+            result?.device?.let { device ->
+                if (device.name == CHESTPOD_DEVICE_NAME) {
+                    // Stop scanning
+                    bluetoothLeScanner.stopScan(this)
+                    // Connect to the device
+                    bluetoothGatt = device.connectGatt(this@MainActivity, false, bluetoothGattCallback)
+                }
             }
+        }
+
+        override fun onBatchScanResults(results: MutableList<ScanResult>?) {
+            // Handle batch scan results if needed
+        }
+
+        override fun onScanFailed(errorCode: Int) {
+            // Handle scan failure if needed
         }
     }
 
@@ -97,6 +202,33 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 //        setContentView(R.layout.activity_main)
+
+        val database = AppDatabase.getInstance(applicationContext)
+        accelerometerDao = database.accelerometerDao()
+
+        locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        locationListener = object : LocationListener {
+            override fun onLocationChanged(location: Location) {
+                Constants.latitude = location.latitude
+                Constants.longitude = location.longitude
+
+                Toast.makeText(applicationContext, "gps : lat : ${Constants.latitude}, lon : ${Constants.longitude}", Toast.LENGTH_SHORT).show()
+
+//                Log.e("eleutheria", "lat : $Constants.latitude, lon : ${Constants.longitude}")
+                // Use the latitude and longitude values as needed
+                // This code will be called whenever a new location update is received
+            }
+        }
+
+        // Initialize Bluetooth adapter and manager
+        bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+        bluetoothAdapter = bluetoothManager.adapter
+
+        // Check if Bluetooth is supported on the device
+        if (bluetoothAdapter == null) {
+            // Bluetooth is not supported, handle accordingly
+            return
+        }
 
         mBluetoothClassicManager.setHandler(mBtHandler)
 
@@ -113,10 +245,23 @@ class MainActivity : AppCompatActivity() {
         filter = IntentFilter(BluetoothAdapter.ACTION_SCAN_MODE_CHANGED)
         this.registerReceiver(mReceiver, filter)
 
-        binding.btConnect.setOnClickListener{
+//        mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
+
+
+
+        binding.btConnect.setOnClickListener {
+            Log.e("eleutheria", "BLE Address : ${Constants.strChestPodAddress}")
             doDiscovery()
+            startBleScan()
         }
 
+        binding.btStart.setOnClickListener {
+//            startChestPod()
+//            setAcceleData()
+
+        }
+
+        appContext = applicationContext
 //        setFakeDataDisplay()
     }
 
@@ -132,59 +277,91 @@ class MainActivity : AppCompatActivity() {
 
         // Request discover from BluetoothAdapter
         mBluetoothClassicManager.startDiscovery()
+
     }
 
+    @SuppressLint("MissingPermission")
     override fun onResume() {
         super.onResume()
 
-        registerReceiver(mGattUpdateReceiver, makeGattUpdateIntentFilter())
-        if (mBluetoothLeService != null) {
-            val result = mBluetoothLeService!!.connect(mDeviceAddress)
-            Log.d("eleutheria", "Connect request result=" + result)
+        if (ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
+            locationManager.requestLocationUpdates(
+                LocationManager.GPS_PROVIDER,
+                LOCATION_UPDATE_INTERVAL,
+                LOCATION_UPDATE_DISTANCE,
+                locationListener
+            )
+        } else {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION),
+                REQUEST_LOCATION_PERMISSION
+            )
         }
     }
 
+    @SuppressLint("MissingPermission")
     override fun onPause() {
         super.onPause()
 
-        unregisterReceiver(mGattUpdateReceiver)
+        locationManager.removeUpdates(locationListener)
     }
 
     override fun onDestroy() {
         super.onDestroy()
 
-        // Make sure we're not doing discovery anymore
-        mBluetoothClassicManager.cancelDiscovery()
-        mBluetoothClassicManager.stop()
-        // Unregister broadcast listeners
-        this.unregisterReceiver(mReceiver)
-
-        unbindService(mServiceConnection)
-        mBluetoothLeService = null
+        stopBleScan()
     }
 
-    private fun parsingData(data: String?) {
-        if (data != null) {
-            Log.e("eleutheria", "driving data : ${data}")
-//          G:0!/
-            //System.out.println(data);
-        }
+    @SuppressLint("MissingPermission")
+    private fun startBleScan() {
+        bluetoothLeScanner = bluetoothAdapter.bluetoothLeScanner
+
+        val scanSettings = ScanSettings.Builder()
+            .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
+            .build()
+
+        val scanFilter = ScanFilter.Builder()
+            // Optional: Set device name or other filters
+            // .setDeviceName("Your Device Name")
+            // .setDeviceAddress("00:00:00:00:00:00")
+            .build()
+
+        val scanFilters = listOf(scanFilter)
+
+        val scanCallbackHandler = Handler(Looper.getMainLooper())
+
+        bluetoothLeScanner.startScan(scanFilters, scanSettings, scanCallback)
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun stopBleScan() {
+        bluetoothLeScanner.stopScan(scanCallback)
     }
 
     private val mReceiver = object : BroadcastReceiver() {
+        @SuppressLint("MissingPermission")
         override fun onReceive(context: Context, intent: Intent) {
             val action = intent.action
 
             // When discovery finds a device
             if (BluetoothDevice.ACTION_FOUND == action) {
-                val device = intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE)
+                val device =
+                    intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE)
                 val strDeviceAddress = device!!.address
                 Constants.strDeviceAddress = strDeviceAddress
                 Log.e("eleutheria", "address : ${strDeviceAddress}")
 
-                if(strDeviceAddress.equals(Constants.MODULE_ADDRESS_OXIMETRY1)) {
-                    Log.e("eleutheria", "find device Oximetry")
-                    if(mBluetoothClassicManager.state != 2 ) {
+                if (strDeviceAddress.equals(Constants.strChestPodAddress)) {
+                    Log.e("eleutheria", "find device Oximetry, Address : ${Constants.strChestPodAddress}")
+                    if (mBluetoothClassicManager.state != 2) {
                         mBluetoothClassicManager.connect(Constants.strDeviceAddress)
                     }
                 }
@@ -199,7 +376,7 @@ class MainActivity : AppCompatActivity() {
             if (BluetoothAdapter.ACTION_SCAN_MODE_CHANGED == action) {
                 val scanMode = intent.getIntExtra(BluetoothAdapter.EXTRA_SCAN_MODE, -1)
                 val prevMode = intent.getIntExtra(BluetoothAdapter.EXTRA_PREVIOUS_SCAN_MODE, -1)
-                when(scanMode) {
+                when (scanMode) {
                     BluetoothAdapter.SCAN_MODE_CONNECTABLE_DISCOVERABLE -> {
                         mBluetoothClassicManager.start()
                         Log.e("eleutheria", "SCAN_MODE_CONNECTABLE_DISCOVERABLE")
@@ -228,15 +405,25 @@ class MainActivity : AppCompatActivity() {
                         Log.e("eleutheria", "MESSAGE_READ : $readMessage")
 
 //                        sendMessageToActivity(readMessage)
-                        val byteHR = ByteBuffer.wrap( byteArrayOf(readBuf.get(1), readBuf.get(0)) )
-                        val byteSpO2 = ByteBuffer.wrap( byteArrayOf(readBuf.get(3), readBuf.get(2)) )
-                        val byteHba1c = ByteBuffer.wrap( byteArrayOf(readBuf.get(7), readBuf.get(6), readBuf.get(5), readBuf.get(4)) )
+                        val byteHR = ByteBuffer.wrap(byteArrayOf(readBuf.get(1), readBuf.get(0)))
+                        val byteSpO2 = ByteBuffer.wrap(byteArrayOf(readBuf.get(3), readBuf.get(2)))
+                        val byteHba1c = ByteBuffer.wrap(
+                            byteArrayOf(
+                                readBuf.get(7),
+                                readBuf.get(6),
+                                readBuf.get(5),
+                                readBuf.get(4)
+                            )
+                        )
 
                         val intHR = byteHR.getShort()
                         val intSpO2 = byteSpO2.getShort()
                         val floatHbA1c = byteHba1c.getFloat()
 
-                        Log.e("eleutheria", "intHR : $intHR, intSpO2 : $intSpO2, floatHbA1c : $floatHbA1c")
+                        Log.e(
+                            "eleutheria",
+                            "intHR : $intHR, intSpO2 : $intSpO2, floatHbA1c : $floatHbA1c"
+                        )
 
                         binding.tvHbA1cValue.text = floatHbA1c.toString() + " %"
                         binding.tvSpo2Value.text = intSpO2.toString() + " %"
@@ -244,10 +431,12 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
                 BluetoothClassicManager.MESSAGE_STATE_CHANGE -> {
-                    when(msg.arg1) {
+                    when (msg.arg1) {
                         BluetoothClassicManager.STATE_NONE -> {    // we're doing nothing
                             Log.e("eleutheria", "STATE_NONE")
                             mIsConnected = false
+                            binding.tvSpo2Stat.text = getString(R.string.str_main_connect)
+                            binding.tvSpo2Stat.setTextColor(ColorStateList.valueOf(ContextCompat.getColor(applicationContext, R.color.gray)))
                         }
                         BluetoothClassicManager.STATE_LISTEN -> {  // now listening for incoming connections
                             Log.e("eleutheria", "STATE_LISTEN")
@@ -260,18 +449,56 @@ class MainActivity : AppCompatActivity() {
                         BluetoothClassicManager.STATE_CONNECTED -> {   // now connected to a remote device
                             Log.e("eleutheria", "STATE_CONNECTED")
                             mIsConnected = true
+
+                            binding.tvSpo2Stat.text = getString(R.string.str_main_disconnect)
+                            binding.tvSpo2Stat.setTextColor(ColorStateList.valueOf(ContextCompat.getColor(applicationContext, R.color.red)))
 //                            moveMainActivity()
                         }
                     }
                 }
                 BluetoothClassicManager.MESSAGE_DEVICE_NAME -> {
-                    if(msg.data != null) {
+                    if (msg.data != null) {
                         Log.e("eleutheria", "MESSAGE_DEVICE_NAME")
                     }
                 }
             }
 
             super.handleMessage(msg)
+        }
+    }
+
+    private fun saveAccelData(AccelX : Float, AccelY : Float, AccelZ : Float) {
+
+        val currentTime = System.currentTimeMillis()
+        val accelroData = Accelerometer(0, currentTime, AccelX, AccelY, AccelZ)
+
+        lifecycleScope.launch(Dispatchers.IO) {
+
+            accelerometerDao.insertAll(accelroData)
+            val data = accelerometerDao.getAll(currentTime)
+            Log.e("eleutheria", "DB data : $data")
+        }
+    }
+
+    private fun sendNetworkData(jsonString: String) {
+
+    }
+
+    fun setAcceleData() {
+
+        val currentTime = System.currentTimeMillis()
+        val random = Random()
+        val randomXFloat = random.nextFloat()
+        val randomYFloat = random.nextFloat()
+        val randomZFloat = random.nextFloat()
+
+        val accelroData = Accelerometer(0, currentTime, randomXFloat, randomYFloat, randomZFloat)
+
+        lifecycleScope.launch(Dispatchers.IO) {
+
+            accelerometerDao.insertAll(accelroData)
+            val data = accelerometerDao.getAll(currentTime)
+            Log.e("eleutheria", "DB data : $data")
         }
     }
 
@@ -293,115 +520,60 @@ class MainActivity : AppCompatActivity() {
         binding.tvGyroZValue.text = "0.02"
 
         binding.btConnect.text = "DISCONNECT"
-        binding.btConnect.text = "DISCONNECT"
-        binding.tvConStat.text = "Connect"
-    }
-
-    // Demonstrates how to iterate through the supported GATT Services/Characteristics.
-    // In this sample, we populate the data structure that is bound to the ExpandableListView
-    // on the UI.
-    private fun displayGattServices(gattServices: List<BluetoothGattService>?) {
-        if (gattServices == null) return
-        var uuid: String? = null
-        val unknownServiceString = resources.getString(R.string.str_bluetooth_unknown_service)
-        val unknownCharaString = resources.getString(R.string.str_bluetooth_unknown_characteristic)
-        val gattServiceData = ArrayList<HashMap<String, String>>()
-        val gattCharacteristicData = ArrayList<ArrayList<HashMap<String, String>>>()
-        mGattCharacteristics = ArrayList<ArrayList<BluetoothGattCharacteristic>>()
-
-        // Loops through available GATT Services.
-        for (gattService in gattServices) {
-            val currentServiceData = HashMap<String, String>()
-            uuid = gattService.uuid.toString()
-            Log.e("eleutheria", "uuid : " + uuid)
-            println(uuid)
-            currentServiceData.put(
-                LIST_NAME, SampleGattAttributes.lookup(uuid, unknownServiceString)
-            )
-            currentServiceData.put(LIST_UUID, uuid)
-            gattServiceData.add(currentServiceData)
-
-            val gattCharacteristicGroupData = ArrayList<HashMap<String, String>>()
-            val gattCharacteristics = gattService.characteristics
-            val charas = ArrayList<BluetoothGattCharacteristic>()
-
-            // Loops through available Characteristics.
-            for (gattCharacteristic in gattCharacteristics) {
-                charas.add(gattCharacteristic)
-                val currentCharaData = HashMap<String, String>()
-                uuid = gattCharacteristic.uuid.toString()
-                println(uuid)
-                println(currentCharaData)
-
-                currentCharaData.put(
-                    LIST_NAME, SampleGattAttributes.lookup(uuid, unknownCharaString)
-                )
-                currentCharaData.put(LIST_UUID, uuid)
-                gattCharacteristicGroupData.add(currentCharaData)
-            }
-            mGattCharacteristics!!.add(charas)
-            gattCharacteristicData.add(gattCharacteristicGroupData)
-        }
-    }
-
-    private fun activeNotification() {
-        if (mGattCharacteristics != null) {
-            val characteristic = mGattCharacteristics!![2][0]
-            val charaProp = characteristic.properties
-            if (charaProp or BluetoothGattCharacteristic.PROPERTY_READ > 0) {
-                // If there is an active notification on a characteristic, clear
-                // it first so it doesn't update the data field on the user interface.
-                if (mNotifyCharacteristic != null) {
-                    mBluetoothLeService!!.setDrivingCharacteristicNotification(
-                        mNotifyCharacteristic!!, false)
-                    mNotifyCharacteristic = null
-                }
-
-                Log.e("eleutheria", "activeNotification")
-//                mBluetoothLeService!!.readCharacteristic(characteristic)
-            }
-
-            if (charaProp or BluetoothGattCharacteristic.PROPERTY_NOTIFY > 0) {
-
-                Log.e("eleutheria", "charaProp : $charaProp, notify : ${BluetoothGattCharacteristic.PROPERTY_NOTIFY}")
-                mNotifyCharacteristic = characteristic
-                mBluetoothLeService!!.setDrivingCharacteristicNotification(
-                    characteristic, true)
-            }
-        }
+        binding.btStart.text = "DISCONNECT"
+        binding.tvSpo2Stat.text = "Connect"
+        binding.tvChestStat.text = "Connect"
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
 //        return super.onCreateOptionsMenu(menu)
 
-        val inflater : MenuInflater = menuInflater
+        val inflater: MenuInflater = menuInflater
         inflater.inflate(R.menu.menu_main, menu)
 
         return true
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        when(item.itemId) {
+        when (item.itemId) {
             R.id.mn_device_setting -> {
-                Log.e("eleutheria", "Click Menu1")
+                Log.e("eleutheria", "Click Device")
                 val intent = Intent(this@MainActivity, DeviceSettingActivity::class.java)
+                startActivity(intent)
+            }
+            R.id.mn_accel_graph -> {
+                Log.e("eleutheria", "Click Graph")
+                val intent = Intent(this@MainActivity, GraphActivity::class.java)
                 startActivity(intent)
             }
         }
         return super.onOptionsItemSelected(item)
     }
 
+    private fun bytesToHexString(bytes: ByteArray): String {
+        val stringBuilder = StringBuilder()
+        for (byte in bytes) {
+            val hexString = Integer.toHexString(0xFF and byte.toInt())
+            if (hexString.length == 1) {
+                stringBuilder.append('0')
+            }
+            stringBuilder.append(hexString)
+        }
+        return stringBuilder.toString()
+    }
+
     companion object {
         private val TAG = MainActivity::class.java.getSimpleName()
 
-        private fun makeGattUpdateIntentFilter(): IntentFilter {
-            val intentFilter = IntentFilter()
-            intentFilter.addAction(BluetoothLeService.ACTION_GATT_CONNECTED)
-            intentFilter.addAction(BluetoothLeService.ACTION_GATT_DISCONNECTED)
-            intentFilter.addAction(BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED)
-            intentFilter.addAction(BluetoothLeService.ACTION_DATA_AVAILABLE)
-            return intentFilter
-        }
+        private const val REQUEST_ENABLE_BT = 1
+        private const val REQUEST_LOCATION_PERMISSION = 1
+        private const val LOCATION_UPDATE_INTERVAL: Long = 10000 // 1 second
+        private const val LOCATION_UPDATE_DISTANCE: Float = 5f // 0 meters
+
+        private const val CHESTPOD_DEVICE_NAME = "ESP32_0"
+        private val CHESTPOD_SERVICE_UUID = UUID.fromString(Constants.MODULE_SERVICE_UUID_CHESTPOD)
+        private val CHESTPOD_CHARACTERISTIC_UUID = UUID.fromString(Constants.MODULE_CHARACTERISTIC_UUID_CHESTPOD)
+        private val CLIENT_CHARACTERISTIC_CONFIG_UUID =
+            UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
     }
 }
-
