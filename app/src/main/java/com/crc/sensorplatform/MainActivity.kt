@@ -19,16 +19,23 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.content.ContextCompat.startActivity
 import androidx.lifecycle.lifecycleScope
-import com.crc.sensorplatform.base.BluetoothClassicManager
-import com.crc.sensorplatform.base.Constants
+import com.crc.sensorplatform.base.*
 import com.crc.sensorplatform.database.Accelerometer
 import com.crc.sensorplatform.database.AccelerometerDao
 import com.crc.sensorplatform.database.AppDatabase
 import com.crc.sensorplatform.databinding.ActivityMainBinding
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.json.JSONObject
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 import java.util.*
@@ -41,7 +48,7 @@ class MainActivity : AppCompatActivity() {
         BluetoothClassicManager.getInstance()
     private var mIsConnected = false
 
-
+    lateinit var retrofit : Retrofit
 //    var mBluetoothAdapter: BluetoothAdapter? = null
 //    var mPairedDevices: MutableSet<BluetoothDevice>? = null
 //    var mListPairedDevices: ArrayList<String>? = null
@@ -138,7 +145,7 @@ class MainActivity : AppCompatActivity() {
                 val jsonString = jsonObject.toString()
 //                Log.e("eleutheria", "jsonString : ${jsonString}")
 
-                sendNetworkData(jsonString)
+//                sendNetworkData(jsonString)
 
                 val axValue = jsonObject.getString("Ax")
                 val ayValue = jsonObject.getString("Ay")
@@ -247,17 +254,22 @@ class MainActivity : AppCompatActivity() {
 
 //        mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
 
+        retrofit = Retrofit.Builder()
+            .baseUrl("https://mp4xmp5830.execute-api.ap-northeast-2.amazonaws.com/") // replace with your API base URL
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
 
 
         binding.btConnect.setOnClickListener {
             Log.e("eleutheria", "BLE Address : ${Constants.strChestPodAddress}")
-            doDiscovery()
+//            doDiscovery()
             startBleScan()
         }
 
         binding.btStart.setOnClickListener {
 //            startChestPod()
 //            setAcceleData()
+            sendNetworkData()
 
         }
 
@@ -343,6 +355,7 @@ class MainActivity : AppCompatActivity() {
 
     @SuppressLint("MissingPermission")
     private fun stopBleScan() {
+
         bluetoothLeScanner.stopScan(scanCallback)
     }
 
@@ -470,18 +483,57 @@ class MainActivity : AppCompatActivity() {
     private fun saveAccelData(AccelX : Float, AccelY : Float, AccelZ : Float) {
 
         val currentTime = System.currentTimeMillis()
+
+        Log.e("eleutheria", "currentTime : $currentTime")
         val accelroData = Accelerometer(0, currentTime, AccelX, AccelY, AccelZ)
 
         lifecycleScope.launch(Dispatchers.IO) {
 
             accelerometerDao.insertAll(accelroData)
-            val data = accelerometerDao.getAll(currentTime)
-            Log.e("eleutheria", "DB data : $data")
+//            val data = accelerometerDao.getAll(currentTime)
+//            Log.e("eleutheria", "DB data : $data")
         }
     }
 
-    private fun sendNetworkData(jsonString: String) {
+//    private fun sendNetworkData(jsonString: String) {
+    private fun sendNetworkData() {
+        val jsonObject = JSONObject()
+        jsonObject.put("user", 1)
+//        jsonObject.put("gps", "37.1322, 42.9382")
+//        jsonObject.put("gx", 0.3)
+//        jsonObject.put("gy", 2.3)
+//        jsonObject.put("gz", 1.7)
 
+        val workoutData = WorkOut(jsonObject)
+
+        val apiService = retrofit.create(ApiService::class.java)
+        val workoutResponse = apiService.getData(workoutData).enqueue(object : Callback<DataResponse> {
+            override fun onResponse(call: Call<DataResponse>, response: Response<DataResponse>) {
+                if (response.isSuccessful) {
+//                    val dataResponse = response.body()
+                    val bodyData = response.body()?.body
+                    val gson = Gson()
+                    val bodyJsonString = Gson().toJson(bodyData)
+                    val type = object : TypeToken<Map<String, String>>() {}.type
+                    val bodyMap: Map<String, String> = gson.fromJson(bodyJsonString, type)
+
+
+//                    val responseBodyJson = response.body().get("body")
+//                    val bodyData = Gson().fromJson(responseBodyJson, object : TypeToken<Map<String, String>>() {}.type)
+                    Log.e("eleutheria", "bodyMap : $bodyMap")
+                    // Process the response data
+                } else {
+                    // Handle error
+                    Log.e("eleutheria", "Handle error")
+                }
+            }
+
+            override fun onFailure(call: Call<DataResponse>, t: Throwable) {
+                // Handle failure
+                Log.e("eleutheria", "onFailure")
+            }
+        })
+        Log.e("eleutheria", "workoutResponse : $workoutResponse")
     }
 
     fun setAcceleData() {

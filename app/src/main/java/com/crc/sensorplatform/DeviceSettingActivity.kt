@@ -34,7 +34,7 @@ class DeviceSettingActivity : AppCompatActivity() {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
                 val selectedOption = options[position]
                 // Handle the selected option here
-                Constants.nSelUser = position
+                Constants.nSelUser = position + 1
 
                 val editor = settings!!.edit()
                 editor.putInt(Constants.PREF_USER_INDEX, Constants.nSelUser)

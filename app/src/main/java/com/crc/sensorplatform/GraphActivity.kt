@@ -67,6 +67,25 @@ class GraphActivity : AppCompatActivity() {
 
         binding.btOk.setOnClickListener {
 //            getData()
+
+            val timestamp = System.currentTimeMillis()
+
+            val timeZone = TimeZone.getTimeZone(Constants.TIMEZONE) // Replace with your preferred timezone
+
+            // Create a Calendar object
+            val calendar = Calendar.getInstance(timeZone)
+            calendar.timeInMillis = timestamp
+
+            // Get the year, month, etc.
+            val year = calendar.get(Calendar.YEAR)
+            val month = calendar.get(Calendar.MONTH) + 1 // Month is 0-based, so add 1
+            val day = calendar.get(Calendar.DAY_OF_MONTH)
+            val hour = calendar.get(Calendar.HOUR_OF_DAY) // 24-hour format
+            val minute = calendar.get(Calendar.MINUTE)
+            val second = calendar.get(Calendar.SECOND)
+            Log.e("eleutheria", "timestamp Year : $year, Month : $month, Day : $day, Hour : $hour, Min : $minute, Sec : $second, TimeZoen : $Constants.TIMEZONE, milisec : $timestamp")
+
+
             getTimeData()
         }
     }
@@ -123,10 +142,23 @@ class GraphActivity : AppCompatActivity() {
     }
 
     fun getTimeData() {
-        val lSelTime = dateTimeToMilliseconds(nDPYear, nDPMonth, nDPDay, nTPHour, nTPMinute, Constants.TIMEZONE)
+        val calendar = Calendar.getInstance()
+        calendar[Calendar.YEAR] = nDPYear
+        calendar[Calendar.MONTH] = nDPMonth - 1 // Months are 0-based in Calendar
 
-//        Log.e("eleutheria", "Year : $nDPYear, Month : $nDPMonth, Day : $nDPDay, Hour : $nTPHour, Min : $nTPMinute, TimeZoen : $Constants.TIMEZONE, milisec : $lSelTime")
-        getData(lSelTime)
+        calendar[Calendar.DAY_OF_MONTH] = nDPDay
+        calendar[Calendar.HOUR_OF_DAY] = nTPHour
+        calendar[Calendar.MINUTE] = nTPMinute
+        calendar[Calendar.SECOND] = 0
+        calendar[Calendar.MILLISECOND] = 0
+
+
+        val millis = calendar.timeInMillis
+
+//        val lSelTime = dateTimeToMilliseconds(nDPYear, nDPMonth, nDPDay, nTPHour, nTPMinute, Constants.TIMEZONE)
+
+        Log.e("eleutheria", "Year : $nDPYear, Month : $nDPMonth, Day : $nDPDay, Hour : $nTPHour, Min : $nTPMinute, TimeZoen : $Constants.TIMEZONE, milisec : $millis")
+        getData(millis)
     }
 
     //long형 타임을 String으로 변환.
