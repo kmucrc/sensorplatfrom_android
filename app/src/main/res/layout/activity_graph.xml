@@ -47,12 +47,21 @@
 
     <Button
         android:id="@+id/btOk"
-        android:layout_width="140dp"
+        android:layout_width="100dp"
         android:layout_height="wrap_content"
         android:layout_marginEnd="20dp"
         android:layout_marginBottom="20dp"
         android:text="@string/str_graph_ok"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent" />
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <Spinner
+        android:id="@+id/spDB"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="20dp"
+        android:entries="@array/databases"
+        app:layout_constraintEnd_toStartOf="@id/btOk"
+        app:layout_constraintTop_toTopOf="@+id/btOk" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

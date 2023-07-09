@@ -19,23 +19,22 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.core.content.ContextCompat.startActivity
 import androidx.lifecycle.lifecycleScope
 import com.crc.sensorplatform.base.*
-import com.crc.sensorplatform.database.Accelerometer
-import com.crc.sensorplatform.database.AccelerometerDao
-import com.crc.sensorplatform.database.AppDatabase
+import com.crc.sensorplatform.database.*
 import com.crc.sensorplatform.databinding.ActivityMainBinding
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.json.JSONException
 import org.json.JSONObject
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.lang.Math.*
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 import java.util.*
@@ -69,6 +68,7 @@ class MainActivity : AppCompatActivity() {
 //    val BT_CONNECTING_STATUS = 3
 
     private lateinit var accelerometerDao : AccelerometerDao
+    private lateinit var athleticsDao : AthleticsDao
     lateinit var appContext : Context
 
     private lateinit var bluetoothAdapter: BluetoothAdapter
@@ -84,13 +84,13 @@ class MainActivity : AppCompatActivity() {
                 // Connected to the BLE device, start discovering services
                 gatt.discoverServices()
                 binding.tvChestStat.text = getString(R.string.str_main_connect)
-                binding.tvChestStat.setTextColor(ColorStateList.valueOf(ContextCompat.getColor(applicationContext, R.color.red)))
+//                binding.tvChestStat.setTextColor(ColorStateList.valueOf(ContextCompat.getColor(applicationContext, R.color.red)))
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                 // Disconnected from the BLE device, clean up resources
                 bluetoothGatt.close()
 
-                binding.tvChestStat.text = getString(R.string.str_main_disconnect)
-                binding.tvChestStat.setTextColor(ColorStateList.valueOf(ContextCompat.getColor(applicationContext, R.color.gray)))
+                binding.tvChestStat.text = getString(R.string.str_main_connect)
+//                binding.tvChestStat.setTextColor(ColorStateList.valueOf(ContextCompat.getColor(applicationContext, R.color.gray)))
             }
         }
 
@@ -147,6 +147,8 @@ class MainActivity : AppCompatActivity() {
 
 //                sendNetworkData(jsonString)
 
+
+
                 val axValue = jsonObject.getString("Ax")
                 val ayValue = jsonObject.getString("Ay")
                 val azValue = jsonObject.getString("Az")
@@ -157,7 +159,22 @@ class MainActivity : AppCompatActivity() {
                 val tempValue = jsonObject.getString("temp")
                 val humiValue = jsonObject.getString("humi")
 
-                saveAccelData(axValue.toFloat(), ayValue.toFloat(), azValue.toFloat() )
+                Constants.strBodyTemp = btempValue
+                Constants.strTemp = tempValue
+                Constants.strHumi = humiValue
+
+
+
+                calculateStep(axValue.toFloat(), ayValue.toFloat(), azValue.toFloat())
+
+
+//                Constants.fAccelX += axValue.toFloat()
+//                Constants.fAccelY += ayValue.toFloat()
+//                Constants.fAccelZ += azValue.toFloat()
+
+                saveNetworkData(jsonObject)
+
+//                saveAccelData(axValue.toFloat(), ayValue.toFloat(), azValue.toFloat() )
 
                 runOnUiThread {
                     binding.tvAccelXValue.text = axValue
@@ -166,9 +183,11 @@ class MainActivity : AppCompatActivity() {
                     binding.tvGyroXValue.text = gxValue
                     binding.tvGyroYValue.text = gyValue
                     binding.tvGyroZValue.text = gzValue
-                    binding.tvBodyTempValue.text = btempValue
-                    binding.tvTempValue.text = tempValue
-                    binding.tvHumiValue.text = humiValue
+                    binding.tvBodyTempValue.text = btempValue + " ℃"
+                    binding.tvTempValue.text = tempValue + " ℃"
+                    binding.tvHumiValue.text = humiValue + " %"
+
+                    Log.e("eleutheria", "btempValue : ${btempValue}, tempValue : ${tempValue}, humiValue : ${humiValue}")
 
 //                    Log.e("eleutheria", "strData : ${strData}")
 //                    Log.e("eleutheria", "Constants.strReceivedData : ${Constants.strReceivedData}")
@@ -212,6 +231,10 @@ class MainActivity : AppCompatActivity() {
 
         val database = AppDatabase.getInstance(applicationContext)
         accelerometerDao = database.accelerometerDao()
+
+
+        val dbAthletics = AthleticsDatabase.getInstance(applicationContext)
+        athleticsDao = dbAthletics.AthleticsDao()
 
         locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
         locationListener = object : LocationListener {
@@ -262,14 +285,14 @@ class MainActivity : AppCompatActivity() {
 
         binding.btConnect.setOnClickListener {
             Log.e("eleutheria", "BLE Address : ${Constants.strChestPodAddress}")
-//            doDiscovery()
+            doDiscovery()
             startBleScan()
         }
 
         binding.btStart.setOnClickListener {
 //            startChestPod()
 //            setAcceleData()
-            sendNetworkData()
+//            sendNetworkData()
 
         }
 
@@ -372,8 +395,8 @@ class MainActivity : AppCompatActivity() {
                 Constants.strDeviceAddress = strDeviceAddress
                 Log.e("eleutheria", "address : ${strDeviceAddress}")
 
-                if (strDeviceAddress.equals(Constants.strChestPodAddress)) {
-                    Log.e("eleutheria", "find device Oximetry, Address : ${Constants.strChestPodAddress}")
+                if (strDeviceAddress.equals(Constants.strOximetryAddress)) {
+                    Log.e("eleutheria", "find device Oximetry, Address : ${Constants.strOximetryAddress}")
                     if (mBluetoothClassicManager.state != 2) {
                         mBluetoothClassicManager.connect(Constants.strDeviceAddress)
                     }
@@ -433,6 +456,10 @@ class MainActivity : AppCompatActivity() {
                         val intSpO2 = byteSpO2.getShort()
                         val floatHbA1c = byteHba1c.getFloat()
 
+                        Constants.strHbA1c = floatHbA1c.toString()
+                        Constants.strSpo2 = intSpO2.toString()
+                        Constants.strHeartRate = intHR.toString()
+
                         Log.e(
                             "eleutheria",
                             "intHR : $intHR, intSpO2 : $intSpO2, floatHbA1c : $floatHbA1c"
@@ -449,7 +476,7 @@ class MainActivity : AppCompatActivity() {
                             Log.e("eleutheria", "STATE_NONE")
                             mIsConnected = false
                             binding.tvSpo2Stat.text = getString(R.string.str_main_connect)
-                            binding.tvSpo2Stat.setTextColor(ColorStateList.valueOf(ContextCompat.getColor(applicationContext, R.color.gray)))
+//                            binding.tvSpo2Stat.setTextColor(ColorStateList.valueOf(ContextCompat.getColor(applicationContext, R.color.gray)))
                         }
                         BluetoothClassicManager.STATE_LISTEN -> {  // now listening for incoming connections
                             Log.e("eleutheria", "STATE_LISTEN")
@@ -463,8 +490,8 @@ class MainActivity : AppCompatActivity() {
                             Log.e("eleutheria", "STATE_CONNECTED")
                             mIsConnected = true
 
-                            binding.tvSpo2Stat.text = getString(R.string.str_main_disconnect)
-                            binding.tvSpo2Stat.setTextColor(ColorStateList.valueOf(ContextCompat.getColor(applicationContext, R.color.red)))
+                            binding.tvSpo2Stat.text = getString(R.string.str_main_connect)
+//                            binding.tvSpo2Stat.setTextColor(ColorStateList.valueOf(ContextCompat.getColor(applicationContext, R.color.red)))
 //                            moveMainActivity()
                         }
                     }
@@ -484,8 +511,13 @@ class MainActivity : AppCompatActivity() {
 
         val currentTime = System.currentTimeMillis()
 
-        Log.e("eleutheria", "currentTime : $currentTime")
-        val accelroData = Accelerometer(0, currentTime, AccelX, AccelY, AccelZ)
+//        Log.e("eleutheria", "currentTime : $currentTime")
+//        Log.e("eleutheriaX", "AccelX : $AccelX")
+//        Log.e("eleutheriaY", "AccelY : $AccelY")
+//        Log.e("eleutheriaZ", "AccelZ : $AccelZ")
+//        Log.e("eleutheria", "AccelX : $AccelX, AccelY : $AccelY, AccelZ : $AccelZ, fAccelX : ${Constants.fAccelX}, fAccelY : ${Constants.fAccelY}, fAccelZ : ${Constants.fAccelZ}")
+//        val accelroData = Accelerometer(0, currentTime, AccelX, AccelY, AccelZ)
+        val accelroData = Accelerometer(0, currentTime, AccelX, AccelY, AccelZ, Constants.fAccelX, Constants.fAccelY, Constants.fAccelZ)
 
         lifecycleScope.launch(Dispatchers.IO) {
 
@@ -493,6 +525,205 @@ class MainActivity : AppCompatActivity() {
 //            val data = accelerometerDao.getAll(currentTime)
 //            Log.e("eleutheria", "DB data : $data")
         }
+    }
+
+    private fun saveAthleticsData() {
+
+        val currentTime = System.currentTimeMillis()
+
+        val athleticsData = Athletics(0, currentTime, Constants.strBodyTemp.toFloat(), Constants.strTemp.toFloat(), Constants.strHumi.toFloat(), Constants.strHbA1c.toFloat(), Constants.strSpo2.toInt(), Constants.strHeartRate.toInt())
+
+        lifecycleScope.launch(Dispatchers.IO) {
+
+            athleticsDao.insertAll(athleticsData)
+        }
+    }
+
+    fun calculateStep(x: Float, y: Float, z: Float) {
+
+        val accel = x * x + y * y + z * z
+        val delta = sqrt(accel.toDouble()) - Constants.dLastAccel
+        Constants.dLastAccel = sqrt(accel.toDouble())
+
+        if (delta > 2) {
+            Constants.strStep += 1
+        }
+    }
+
+    fun calculateDistance(
+        lat1: Double,
+        lon1: Double,
+        lat2: Double,
+        lon2: Double
+    ): Double {
+        val radius = 6371.0 // Radius of the earth in kilometers. Use 3956 for miles
+
+        val latDistance = toRadians(lat2 - lat1)
+        val lonDistance = toRadians(lon2 - lon1)
+
+        val a = sin(latDistance / 2) * sin(latDistance / 2) +
+                cos(toRadians(lat1)) * cos(toRadians(lat2)) *
+                sin(lonDistance / 2) * sin(lonDistance / 2)
+
+        val c = 2 * atan2(sqrt(a), sqrt(1 - a))
+
+        return radius * c
+    }
+
+    @SuppressLint("MissingPermission")
+    fun saveNetworkData(jsonObject : JSONObject) {
+
+
+        Constants.NEW_CURRENT_TIME = System.currentTimeMillis()
+
+        if(Constants.OLD_CURRENT_TIME == 0L) {
+            Constants.OLD_CURRENT_TIME = Constants.NEW_CURRENT_TIME
+        }
+
+        if(Constants.NEW_CURRENT_TIME >= Constants.OLD_CURRENT_TIME + Constants.STANDARD_TEN_SECONDS) {
+
+            Constants.OLD_CURRENT_TIME = Constants.NEW_CURRENT_TIME
+
+            val resultDistance = calculateDistance(Constants.latitude, Constants.longitude, Constants.oldLatitude, Constants.oldLongitude)
+            Constants.oldLatitude = Constants.latitude
+            Constants.oldLongitude = Constants.longitude
+            Constants.strDistance = resultDistance
+
+            val bodytempJsonObject = JSONObject()
+            val tempJsonObject = JSONObject()
+            val humiJsonObject = JSONObject()
+            val stepJsonObject = JSONObject()
+            val distanceJsonObject = JSONObject()
+            val hba1cJsonObject = JSONObject()
+            val spo2JsonObject = JSONObject()
+            val heartrateJsonObject = JSONObject()
+
+
+            try {
+                bodytempJsonObject.put("sensortype", Constants.INDEX_BODYTEMPERATURE)
+                bodytempJsonObject.put("value", Constants.strBodyTemp)
+            } catch (e: JSONException) {
+                Log.e("eleutheria", "bodytemp Error : $e")
+            }
+
+            try {
+                tempJsonObject.put("sensortype", Constants.INDEX_TEMPERATURE)
+                tempJsonObject.put("value", Constants.strTemp)
+            } catch (e: JSONException) {
+                Log.e("eleutheria", "temp Error : $e")
+            }
+
+            try {
+                humiJsonObject.put("sensortype", Constants.INDEX_HUMIDITY)
+                humiJsonObject.put("value", Constants.strHumi)
+            } catch (e: JSONException) {
+                Log.e("eleutheria", "Humidity Error : $e")
+            }
+
+            try {
+                stepJsonObject.put("sensortype", Constants.INDEX_STEP)
+                stepJsonObject.put("value", Constants.strStep)
+            } catch (e: JSONException) {
+                Log.e("eleutheria", "step Error : $e")
+            }
+
+            try {
+                distanceJsonObject.put("sensortype", Constants.INDEX_DISTANCE)
+                distanceJsonObject.put("value", Constants.strDistance)
+            } catch (e: JSONException) {
+                Log.e("eleutheria", "distance Error : $e")
+            }
+
+            try {
+                hba1cJsonObject.put("sensortype", Constants.INDEX_HBA1C)
+                hba1cJsonObject.put("value", Constants.strHbA1c)
+            } catch (e: JSONException) {
+                Log.e("eleutheria", "hba1c Error : $e")
+            }
+
+            try {
+                spo2JsonObject.put("sensortype", Constants.INDEX_SPO2)
+                spo2JsonObject.put("value", Constants.strSpo2)
+            } catch (e: JSONException) {
+                Log.e("eleutheria", "spo2 Error : $e")
+            }
+
+            try {
+                heartrateJsonObject.put("sensortype", Constants.INDEX_HEARTRATE)
+                heartrateJsonObject.put("value", Constants.strHeartRate)
+            } catch (e: JSONException) {
+                Log.e("eleutheria", "heartrate Error : $e")
+            }
+
+            val chestJsonObject = JSONObject()
+
+            try {
+                chestJsonObject.put("groupid", Constants.nSelUser)
+                chestJsonObject.put("gps", "${Constants.latitude},${Constants.longitude}")
+                chestJsonObject.put("bodytemp", bodytempJsonObject)
+                chestJsonObject.put("temp", tempJsonObject)
+                chestJsonObject.put("humi", humiJsonObject)
+                chestJsonObject.put("step", stepJsonObject)
+                chestJsonObject.put("distance", distanceJsonObject)
+                chestJsonObject.put("hba1c", hba1cJsonObject)
+                chestJsonObject.put("spo2", spo2JsonObject)
+                chestJsonObject.put("heartrate", heartrateJsonObject)
+
+                Log.e("eleutheria", "chestJsonObject  : ${chestJsonObject.toString()}")
+                saveAthleticsData()
+            } catch (e: JSONException) {
+                Log.e("eleutheria", "chestJsonObject Error : $e")
+            }
+        }
+
+//        {
+//            "groupid": "3",
+//            "gps": "37.61200929,126.99483306",
+//            "bodytemp": {
+//                "sensortype": "16",
+//                "value": " 29.96"
+//            },
+//            "temp": {
+//            "sensortype": "17",
+//            "value": " 31.17"
+//            },
+//            "humi": {
+//            "sensortype": "17",
+//            "value": " 31.17"
+//            },
+//            "step": {
+//            "sensortype": "17",
+//            "value": " 31.17"
+//            },
+//            "distance": {
+//            "sensortype": "17",
+//            "value": " 31.17"
+//            },
+//            "hba1c": {
+//            "sensortype": "17",
+//            "value": " 31.17"
+//            },
+//            "spo2": {
+//            "sensortype": "17",
+//            "value": " 31.17"
+//            },
+//            "heartrate": {
+//            "sensortype": "17",
+//            "value": " 31.17"
+//            }
+//        }
+
+//        val keyValuePairList = strData.split("/")
+//
+//        for (pair in keyValuePairList) {
+//            val keyValue = pair.split(":")
+//            if (keyValue.size == 2) {
+//                val key = keyValue[0].trim()
+//                val value = keyValue[1].trim()
+//                jsonObject.put(key, value)
+//            }
+//        }
+
     }
 
 //    private fun sendNetworkData(jsonString: String) {
@@ -544,7 +775,7 @@ class MainActivity : AppCompatActivity() {
         val randomYFloat = random.nextFloat()
         val randomZFloat = random.nextFloat()
 
-        val accelroData = Accelerometer(0, currentTime, randomXFloat, randomYFloat, randomZFloat)
+        val accelroData = Accelerometer(0, currentTime, randomXFloat, randomYFloat, randomZFloat, randomXFloat, randomYFloat, randomZFloat)
 
         lifecycleScope.launch(Dispatchers.IO) {
 

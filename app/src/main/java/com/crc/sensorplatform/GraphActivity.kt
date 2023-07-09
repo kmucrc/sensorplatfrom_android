@@ -1,14 +1,21 @@
 package com.crc.sensorplatform
 
+import android.content.Context
+import android.content.SharedPreferences
 import android.graphics.Color
 import android.os.Bundle
 import android.provider.Settings.System.DATE_FORMAT
 import android.util.Log
+import android.view.View
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.crc.sensorplatform.base.Constants
 import com.crc.sensorplatform.database.AccelerometerDao
 import com.crc.sensorplatform.database.AppDatabase
+import com.crc.sensorplatform.database.AthleticsDao
+import com.crc.sensorplatform.database.AthleticsDatabase
 import com.crc.sensorplatform.databinding.ActivityGraphBinding
 import com.github.mikephil.charting.data.Entry
 import com.github.mikephil.charting.data.LineData
@@ -26,8 +33,10 @@ import java.util.*
 class GraphActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityGraphBinding
+    private var settings: SharedPreferences? = null
 
     private lateinit var accelerometerDao : AccelerometerDao
+    private lateinit var athleticsDao : AthleticsDao
 
     var nDPYear = 2023
     var nDPMonth = 6
@@ -44,6 +53,9 @@ class GraphActivity : AppCompatActivity() {
 
         val database = AppDatabase.getInstance(applicationContext)
         accelerometerDao = database.accelerometerDao()
+
+        val dbAthletics = AthleticsDatabase.getInstance(applicationContext)
+        athleticsDao = dbAthletics.AthleticsDao()
 
         val cal = Calendar.getInstance()
         val nYear = cal.get(Calendar.YEAR)
@@ -88,6 +100,33 @@ class GraphActivity : AppCompatActivity() {
 
             getTimeData()
         }
+
+        settings = getSharedPreferences(Constants.SHARED_PREF_SEUPDATA, Context.MODE_PRIVATE)
+
+        val options = resources.getStringArray(R.array.databases)
+
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, options)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+
+        binding.spDB.adapter = adapter
+
+        binding.spDB.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                val selectedOption = options[position]
+                // Handle the selected option here
+                Constants.nSelDB = position
+
+                val editor = settings!!.edit()
+                editor.putInt(Constants.PREF_DB_INDEX, Constants.nSelDB)
+                editor.apply()
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>?) {
+                // Handle the case where no option is selected
+            }
+        }
+
+        binding.spDB.setSelection(Constants.nSelDB)
     }
 
     private fun getData(lSelTime : Long) {
@@ -141,6 +180,82 @@ class GraphActivity : AppCompatActivity() {
         }
     }
 
+    private fun getAthleticsData(lSelTime : Long) {
+//        val currentTime = System.currentTimeMillis()
+//        val currentTime = 1686298590015
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            val datas = athleticsDao.getAll(lSelTime)
+//            Log.e("eleutheria", "DB datas : $datas")
+
+            val dataSetBTempEntries = mutableListOf<Entry>()
+            val dataSetTempEntries = mutableListOf<Entry>()
+            val dataSetHumiEntries = mutableListOf<Entry>()
+            val dataSetHba1cEntries = mutableListOf<Entry>()
+            val dataSetSpo2Entries = mutableListOf<Entry>()
+            val dataSetHeartRateEntries = mutableListOf<Entry>()
+
+            var fIndex = 0.0f
+
+            for(data in datas) {
+//                Log.e("eleutheria", "DB data : $data")
+//                val strCTime = longTimeToDatetimeAsString(data.createdTime)
+                fIndex++
+                data.fBodyTemp
+                data.fTemp
+                data.fHumi
+                data.fHba1c
+                data.nSpo2
+                data.nHeartRate
+
+                dataSetBTempEntries.add(Entry(fIndex, data.fBodyTemp))
+                dataSetTempEntries.add(Entry(fIndex, data.fTemp))
+                dataSetHumiEntries.add(Entry(fIndex, data.fHumi))
+                dataSetHba1cEntries.add(Entry(fIndex, data.fHba1c))
+                dataSetSpo2Entries.add(Entry(fIndex, data.nSpo2.toFloat()))
+                dataSetHeartRateEntries.add(Entry(fIndex, data.nHeartRate.toFloat()))
+
+            }
+
+            val dataSet1 = LineDataSet(dataSetBTempEntries, "BTemp").apply {
+                color = Color.BLUE
+                valueTextColor = Color.RED
+            }
+
+            val dataSet2 = LineDataSet(dataSetTempEntries, "Temp").apply {
+                color = Color.GREEN
+                valueTextColor = Color.RED
+            }
+
+            val dataSet3 = LineDataSet(dataSetHumiEntries, "Humi").apply {
+                color = Color.YELLOW
+                valueTextColor = Color.RED
+            }
+
+            val dataSet4 = LineDataSet(dataSetHba1cEntries, "HbA1C").apply {
+                color = Color.RED
+                valueTextColor = Color.RED
+            }
+
+            val dataSet5 = LineDataSet(dataSetSpo2Entries, "Spo2").apply {
+                color = Color.WHITE
+                valueTextColor = Color.RED
+            }
+
+            val dataSet6 = LineDataSet(dataSetHeartRateEntries, "HR").apply {
+                color = Color.MAGENTA
+                valueTextColor = Color.RED
+            }
+
+            // Creating a LineData object with all the data sets
+            val lineData = LineData(dataSet1, dataSet2, dataSet3, dataSet4, dataSet5, dataSet6)
+
+            binding.mpGraphchart.data = lineData
+            binding.mpGraphchart.invalidate() // Refresh the chart
+        }
+    }
+
+
     fun getTimeData() {
         val calendar = Calendar.getInstance()
         calendar[Calendar.YEAR] = nDPYear
@@ -158,7 +273,12 @@ class GraphActivity : AppCompatActivity() {
 //        val lSelTime = dateTimeToMilliseconds(nDPYear, nDPMonth, nDPDay, nTPHour, nTPMinute, Constants.TIMEZONE)
 
         Log.e("eleutheria", "Year : $nDPYear, Month : $nDPMonth, Day : $nDPDay, Hour : $nTPHour, Min : $nTPMinute, TimeZoen : $Constants.TIMEZONE, milisec : $millis")
-        getData(millis)
+
+        if(Constants.nSelDB == 0) {
+            getData(millis)
+        } else {
+            getAthleticsData(millis)
+        }
     }
 
     //long형 타임을 String으로 변환.

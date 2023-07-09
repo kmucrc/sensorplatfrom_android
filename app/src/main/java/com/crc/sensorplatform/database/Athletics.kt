@@ -4,14 +4,14 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 
 @Entity
-data class Accelerometer(
+data class Athletics(
     @PrimaryKey(autoGenerate = true)
     val id: Int,
     val createdTime: Long,
-    val accelX: Float,
-    val accelY: Float,
-    val accelZ: Float,
-    val accelXp: Float,
-    val accelYp: Float,
-    val accelZp: Float
+    val fBodyTemp: Float,
+    val fTemp: Float,
+    val fHumi: Float,
+    val fHba1c: Float,
+    val nSpo2: Int,
+    val nHeartRate: Int
 )
