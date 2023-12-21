@@ -3,8 +3,10 @@ package com.crc.sensorplatform
 import android.Manifest
 import android.app.Activity
 import android.app.AlertDialog
+import android.content.Context
 import android.content.DialogInterface
 import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.location.LocationManager
 import android.os.Build
@@ -16,12 +18,14 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.crc.sensorplatform.base.Constants
 import com.crc.sensorplatform.databinding.ActivityIntroBinding
 
 class IntroActivity : AppCompatActivity() {
     private  lateinit var binding : ActivityIntroBinding
 
     private val PERMISSIONS_REQUEST_CODE = 100
+    private var settings: SharedPreferences? = null
 
     var REQUIRED_PERMISSIONS = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         arrayOf(
@@ -53,7 +57,57 @@ class IntroActivity : AppCompatActivity() {
         binding = ActivityIntroBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        loadSetting()
         checkAllPermissions()
+    }
+
+    private fun loadSetting() {
+        settings = getSharedPreferences(Constants.SHARED_PREF_SEUPDATA, Context.MODE_PRIVATE)
+
+        Constants.nSelUser =
+            settings!!.getInt(Constants.PREF_USER_INDEX, Constants.nSelUser)
+        Constants.nSelChestPod =
+            settings!!.getInt(Constants.PREF_CHESTPOD_INDEX, Constants.nSelChestPod)
+        Constants.nSelSpO2 =
+            settings!!.getInt(Constants.PREF_SPO2_INDEX, Constants.nSelSpO2)
+
+        when(Constants.nSelChestPod) {
+            0 -> {
+                Constants.strChestPodAddress = Constants.MODULE_ADDRESS_CHESTPOD0
+            }
+            1 -> {
+                Constants.strChestPodAddress = Constants.MODULE_ADDRESS_CHESTPOD1
+            }
+            2 -> {
+                Constants.strChestPodAddress = Constants.MODULE_ADDRESS_CHESTPOD2
+            }
+            3 -> {
+                Constants.strChestPodAddress = Constants.MODULE_ADDRESS_CHESTPOD3
+            }
+            4 -> {
+                Constants.strChestPodAddress = Constants.MODULE_ADDRESS_CHESTPOD4
+            }
+        }
+
+        when(Constants.nSelSpO2) {
+            0 -> {
+                Constants.strOximetryAddress = Constants.MODULE_ADDRESS_OXIMETRY0
+            }
+            1 -> {
+                Constants.strOximetryAddress = Constants.MODULE_ADDRESS_OXIMETRY1
+            }
+            2 -> {
+                Constants.strOximetryAddress = Constants.MODULE_ADDRESS_OXIMETRY2
+            }
+            3 -> {
+                Constants.strOximetryAddress = Constants.MODULE_ADDRESS_OXIMETRY3
+            }
+            4 -> {
+                Constants.strOximetryAddress = Constants.MODULE_ADDRESS_OXIMETRY4
+            }
+        }
+
+
     }
 
     private fun checkAllPermissions() {

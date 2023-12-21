@@ -7,55 +7,88 @@
     tools:context=".MainActivity">
 
     <Button
-        android:id="@+id/btChestConnect"
+        android:id="@+id/btConnect"
         android:layout_width="140dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="30dp"
         android:layout_marginTop="20dp"
-        android:text="Connect"
+        android:text="@string/str_main_connect"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
     <Button
-        android:id="@+id/btOximetryConnect"
+        android:id="@+id/btStart"
         android:layout_width="140dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="30dp"
         android:layout_marginTop="20dp"
-        android:text="Connect"
-        app:layout_constraintStart_toEndOf="@id/btChestConnect"
+        android:text="@string/str_main_start"
+        app:layout_constraintStart_toEndOf="@id/btConnect"
         app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
-        android:id="@+id/tvConStat"
+        android:id="@+id/tvSpo2Title"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="30dp"
         android:layout_marginTop="20dp"
-        android:text="Disconnected"
+        android:text="@string/str_main_spo2"
         android:textColor="#AAAAAA"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/btChestConnect" />
+        app:layout_constraintTop_toBottomOf="@id/btConnect" />
+
+    <TextView
+        android:id="@+id/tvSpo2Stat"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="30dp"
+        android:layout_marginTop="20dp"
+        android:text="@string/str_main_disconnect"
+        android:textColor="#AAAAAA"
+        app:layout_constraintStart_toEndOf="@+id/tvSpo2Title"
+        app:layout_constraintTop_toBottomOf="@id/btConnect" />
+
+    <TextView
+        android:id="@+id/tvChestTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="30dp"
+        android:layout_marginTop="10dp"
+        android:text="@string/str_main_chestpod"
+        android:textColor="#AAAAAA"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvSpo2Title" />
+
+    <TextView
+        android:id="@+id/tvChestStat"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="30dp"
+        android:layout_marginTop="10dp"
+        android:text="@string/str_main_disconnect"
+        android:textColor="#AAAAAA"
+        app:layout_constraintStart_toEndOf="@+id/tvChestTitle"
+        app:layout_constraintTop_toBottomOf="@id/tvSpo2Title" />
 
     <Switch
         android:id="@+id/swConnect"
-        android:layout_width="160dp"
+        android:layout_width="100dp"
         android:layout_height="wrap_content"
         android:layout_alignParentTop="true"
         android:layout_marginStart="70dp"
         android:text="@string/str_main_connect_aws"
-        app:layout_constraintStart_toEndOf="@id/tvConStat"
-        app:layout_constraintTop_toTopOf="@id/tvConStat" />
+        app:layout_constraintEnd_toEndOf="@id/btStart"
+        app:layout_constraintTop_toTopOf="@id/tvSpo2Title" />
 
     <View
         android:id="@+id/divider"
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:layout_alignBottom="@+id/tvConStat"
+        android:layout_alignBottom="@+id/tvSpo2Title"
         android:background="?android:attr/listDivider"
         android:layout_marginTop="20dp"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tvConStat" />
+        app:layout_constraintTop_toBottomOf="@id/tvChestTitle" />
 
     <TextView
         android:id="@+id/tvHbA1c"
@@ -72,14 +105,14 @@
 
     <TextView
         android:id="@+id/tvHbA1cValue"
-        android:layout_width="wrap_content"
+        android:layout_width="80dp"
         android:layout_height="wrap_content"
         android:layout_alignParentStart="true"
+        android:layout_marginStart="30dp"
+        android:layout_marginTop="20dp"
         android:text="-- %"
         android:textSize="18sp"
         android:textStyle="bold"
-        android:layout_marginTop="20dp"
-        android:layout_marginStart="30dp"
         app:layout_constraintStart_toEndOf="@id/tvHbA1c"
         app:layout_constraintTop_toBottomOf="@id/divider" />
 
@@ -98,13 +131,13 @@
 
     <TextView
         android:id="@+id/tvSpo2Value"
-        android:layout_width="wrap_content"
+        android:layout_width="80dp"
         android:layout_height="wrap_content"
         android:layout_alignParentStart="true"
+        android:layout_marginTop="20dp"
         android:text="-- %"
         android:textSize="18sp"
         android:textStyle="bold"
-        android:layout_marginTop="20dp"
         app:layout_constraintStart_toStartOf="@id/tvHbA1cValue"
         app:layout_constraintTop_toBottomOf="@id/tvHbA1c" />
 
@@ -123,7 +156,7 @@
 
     <TextView
         android:id="@+id/tvHRValue"
-        android:layout_width="wrap_content"
+        android:layout_width="80dp"
         android:layout_height="wrap_content"
         android:layout_alignParentStart="true"
         android:layout_marginTop="20dp"
@@ -158,14 +191,14 @@
 
     <TextView
         android:id="@+id/tvTempValue"
-        android:layout_width="wrap_content"
+        android:layout_width="80dp"
         android:layout_height="wrap_content"
         android:layout_alignParentStart="true"
+        android:layout_marginStart="30dp"
+        android:layout_marginTop="20dp"
         android:text="-- C"
         android:textSize="18sp"
         android:textStyle="bold"
-        android:layout_marginTop="20dp"
-        android:layout_marginStart="30dp"
         app:layout_constraintStart_toEndOf="@id/tvTemp"
         app:layout_constraintTop_toBottomOf="@id/dvSecond" />
 
@@ -184,13 +217,13 @@
 
     <TextView
         android:id="@+id/tvHumiValue"
-        android:layout_width="wrap_content"
+        android:layout_width="80dp"
         android:layout_height="wrap_content"
         android:layout_alignParentStart="true"
+        android:layout_marginTop="20dp"
         android:text="-- %"
         android:textSize="18sp"
         android:textStyle="bold"
-        android:layout_marginTop="20dp"
         app:layout_constraintStart_toStartOf="@id/tvTempValue"
         app:layout_constraintTop_toBottomOf="@id/tvTemp" />
 
@@ -209,7 +242,7 @@
 
     <TextView
         android:id="@+id/tvBodyTempValue"
-        android:layout_width="wrap_content"
+        android:layout_width="80dp"
         android:layout_height="wrap_content"
         android:layout_alignParentStart="true"
         android:layout_marginTop="20dp"
@@ -247,11 +280,11 @@
 
     <TextView
         android:id="@+id/tvAccelXValue"
-        android:layout_width="wrap_content"
+        android:layout_width="60dp"
         android:layout_height="wrap_content"
         android:layout_alignParentStart="true"
-        android:layout_marginTop="20dp"
         android:layout_marginStart="10dp"
+        android:layout_marginTop="20dp"
         android:text="--"
         android:textSize="18sp"
         android:textStyle="bold"
@@ -273,11 +306,11 @@
 
     <TextView
         android:id="@+id/tvAccelYValue"
-        android:layout_width="wrap_content"
+        android:layout_width="60dp"
         android:layout_height="wrap_content"
         android:layout_alignParentStart="true"
-        android:layout_marginTop="20dp"
         android:layout_marginStart="10dp"
+        android:layout_marginTop="20dp"
         android:text="--"
         android:textSize="18sp"
         android:textStyle="bold"
@@ -299,11 +332,11 @@
 
     <TextView
         android:id="@+id/tvAccelZValue"
-        android:layout_width="wrap_content"
+        android:layout_width="60dp"
         android:layout_height="wrap_content"
         android:layout_alignParentStart="true"
-        android:layout_marginTop="20dp"
         android:layout_marginStart="10dp"
+        android:layout_marginTop="20dp"
         android:text="--"
         android:textSize="18sp"
         android:textStyle="bold"
@@ -338,11 +371,11 @@
 
     <TextView
         android:id="@+id/tvGyroXValue"
-        android:layout_width="wrap_content"
+        android:layout_width="60dp"
         android:layout_height="wrap_content"
         android:layout_alignParentStart="true"
-        android:layout_marginTop="20dp"
         android:layout_marginStart="10dp"
+        android:layout_marginTop="20dp"
         android:text="--"
         android:textSize="18sp"
         android:textStyle="bold"
@@ -364,11 +397,11 @@
 
     <TextView
         android:id="@+id/tvGyroYValue"
-        android:layout_width="wrap_content"
+        android:layout_width="60dp"
         android:layout_height="wrap_content"
         android:layout_alignParentStart="true"
-        android:layout_marginTop="20dp"
         android:layout_marginStart="10dp"
+        android:layout_marginTop="20dp"
         android:text="--"
         android:textSize="18sp"
         android:textStyle="bold"
@@ -390,11 +423,11 @@
 
     <TextView
         android:id="@+id/tvGyroZValue"
-        android:layout_width="wrap_content"
+        android:layout_width="60dp"
         android:layout_height="wrap_content"
         android:layout_alignParentStart="true"
-        android:layout_marginTop="20dp"
         android:layout_marginStart="10dp"
+        android:layout_marginTop="20dp"
         android:text="--"
         android:textSize="18sp"
         android:textStyle="bold"

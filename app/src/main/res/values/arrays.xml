@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="users">
+        <item>(0)Baek</item>
+        <item>(1)Lee</item>
+        <item>2</item>
+        <item>3</item>
+        <item>5</item>
+        <item>6</item>
+        <item>7</item>
+        <item>8</item>
+        <item>9</item>
+        <item>10</item>
+    </string-array>
+    <string-array name="databases">
+        <item>Accel</item>
+        <item>Athle</item>
+    </string-array>
+</resources>

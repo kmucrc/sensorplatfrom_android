@@ -1,5 +1,6 @@
 package com.crc.sensorplatform.base
 
+import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothServerSocket
@@ -96,22 +97,27 @@ class BluetoothClassicManager {
         return mAdapter.isEnabled
     }
 
+    @SuppressLint("MissingPermission")
     fun getScanMode(): Int {
         return mAdapter.scanMode
     }
 
+    @SuppressLint("MissingPermission")
     fun startDiscovery() {
         mAdapter.startDiscovery()
     }
 
+    @SuppressLint("MissingPermission")
     fun cancelDiscovery() {
         mAdapter.cancelDiscovery()
     }
 
+    @SuppressLint("MissingPermission")
     fun isDiscovering(): Boolean {
         return mAdapter.isDiscovering
     }
 
+    @SuppressLint("MissingPermission")
     fun getBondedDevices(): Set<BluetoothDevice> {
         return mAdapter.bondedDevices
     }
@@ -191,6 +197,7 @@ class BluetoothClassicManager {
      * @param socket  The BluetoothSocket on which the connection was made
      * @param device  The BluetoothDevice that has been connected
      */
+    @SuppressLint("MissingPermission")
     @Synchronized
     fun connected(socket: BluetoothSocket, device: BluetoothDevice) {
         Log.d(TAG, "connected")
@@ -336,6 +343,7 @@ class BluetoothClassicManager {
      * like a server-side client. It runs until a connection is accepted
      * (or until cancelled).
      */
+    @SuppressLint("MissingPermission")
     private inner class AcceptThread : Thread() {
         // The local server socket
         private val mmServerSocket: BluetoothServerSocket?
@@ -429,6 +437,7 @@ class BluetoothClassicManager {
             mmSocket = tmp
         }
 
+        @SuppressLint("MissingPermission")
         @Throws(IOException::class)
         private fun createBluetoothSocket(device: BluetoothDevice): BluetoothSocket {
             if (Build.VERSION.SDK_INT >= 10) {
@@ -445,6 +454,7 @@ class BluetoothClassicManager {
             }
             return device.createRfcommSocketToServiceRecord(MY_UUID)
         }
+        @SuppressLint("MissingPermission")
         override fun run() {
             Log.i(TAG, "BEGIN mConnectThread")
             name = "ConnectThread"
